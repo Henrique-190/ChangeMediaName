@@ -1,7 +1,8 @@
 import subprocess
 import os
-from os import path
+from timeit import default_timer as timer
 import sys
+from os import path
 
 sys.stderr = open('error.txt', 'a+')
 
@@ -73,7 +74,7 @@ def change_name(outputfile, filepath, filename, name):
     outputfile.write(filename + ' changed to ' + name + '\n')
 
 
-# This method manages the media files received and call methods to get file properties
+# This method manages the media files received, call methods to get file properties
 # and to change its name. Moreover, it creates two logs about files with name changed or not.
 # Also counts the number of files processed.
 def file_properties(filepath, filename):
@@ -99,7 +100,7 @@ def file_properties(filepath, filename):
     notchangedfiles.close()
 
 
-# Method that manages the files of any folder
+# Method that manages the files of every folder of a folder list
 def process_folders(folderlist):
     global nfolders
     for foldername in folderlist:
@@ -109,6 +110,8 @@ def process_folders(folderlist):
                 file_properties(foldername, file)
 
 
+# Delete any folder of the dictionary, checking one key and every values. Subdirectories of that folder are also
+# deleted.
 def delete_subdirectories(foldername):
     global folderDict
     for k in folderDict:
@@ -122,6 +125,7 @@ def delete_subdirectories(foldername):
                     folderDict[k].remove(subd)
 
 
+# Using the folderDict, prints with a specific format
 def print_dict():
     print(
         '\n\n\n*____________________________________________________________________________________________________*\n'
@@ -138,6 +142,8 @@ def print_dict():
         counter += 1
 
 
+# Creates a dictionary about subdirectories. Each key is a path to every directory and its value is subdirectories of
+# that directory
 def subdirectories(foldername):
     subflist = list(filter(lambda subf: os.path.isdir(os.path.join(foldername, subf)), os.listdir(foldername)))
     for x in subflist:
@@ -146,6 +152,8 @@ def subdirectories(foldername):
     folderDict[foldername] = subflist
 
 
+# Gets options from the user. He can choose if he wants to select or discard folders and, writing its number,
+# builds a list of path to directories to process.
 def select_discard():
     option = ''
     while option != '1' and option != '2':
@@ -164,21 +172,22 @@ def select_discard():
     print_dict()
 
     foldrs = '1'
-    while foldrs != '':
+    while foldrs.lower() != 'done':
         foldrs = input('\nPlease write the numbers of the directories you want to' + aux1 + '.\n' +
                        'If you want only to' + aux1 + " a subdirectory, search upper, there will be its number" +
                        ' If you want to see the folders again, write show .\n' +
-                       "If you don't want to select more directories, press Enter." + aux2 + '-> ')
+                       "If you don't want to select more directories, write 'done'." + aux2 + '-> ')
         if foldrs.lower() == 'show':
             print_dict()
             if option == '1':
                 print(
-                    '\n\n\n*_________________________________________________________________________________________*\n'
+                    '\n\n\n*_________________________________________________________________________________________'
+                    '*\n '
                     '*|                                  Directories selected                                 |*\n'
                     '*‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾*\n')
                 for x in folderlist:
                     print(x)
-        elif foldrs != '':
+        elif foldrs != 'done':
             try:
                 if int(foldrs) < len(list(folderDict.keys())):
                     delete_subdirectories(list(folderDict.keys())[int(foldrs)])
@@ -201,11 +210,15 @@ def main():
           "creation date.")
     print('\nI give you an example: helloIamAnImage.jpg -----------> 2021-12-05 04_20_00')
 
-    process_folders(select_discard())
+    folderlist = select_discard()
+    tic = timer()
+    process_folders(folderlist)
+    toc = timer()
+    t = toc - tic
 
     sys.stderr.close()
     print('\n\nFolders: ' + str(nfolders) + '. Files processed: ' + str(nfilesprocessed)
-          + '. File with name changed: ' + str(nfilesconverted))
+          + '. File with name changed: ' + str(nfilesconverted) + ('. Time spent: %.2f ' % t) + 'seconds')
 
     ans2 = ''
     while ans2.lower() != 'y' and ans2.lower() != 'n':
@@ -215,7 +228,10 @@ def main():
         delete_all(os.getcwd())
         print('Done.')
 
-    print('\nBye!')
+    print('\nMade by Henrique Alvelos. '
+          '\nCheck my Github profile: https://github.com/Henrique-190'
+          '\nBuy me a coffee: https://www.paypal.com/paypalme/henriquealvelos'
+          '\nBye! ')
 
 
 subdirectories(os.getcwd())
