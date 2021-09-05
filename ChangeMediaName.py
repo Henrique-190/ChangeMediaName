@@ -1,5 +1,6 @@
 import subprocess
 import os
+from datetime import datetime
 from timeit import default_timer as timer
 import sys
 from os import path
@@ -21,10 +22,19 @@ imagefiletype = ['.jpg', '.jpeg', '.png']
 
 # Method that is called if the user wants to delete all the log files.
 # It searches in all directories.
-def delete_all(foldername):
+def delete_all(option, foldername):
     for file in os.listdir(foldername):
         if path.isfile(os.path.join(foldername, file)):
-            if file in delete:
+            if file in delete and ((option == 1 and os.path.getsize(file) == 0) or option == 2):
+                os.remove(os.path.join(foldername, file))
+        elif path.isdir(os.path.join(foldername, file)):
+            delete_all(os.path.join(foldername, file))
+
+
+def delete_emptylogs(foldername):
+    for file in os.listdir(foldername):
+        if path.isfile(os.path.join(foldername, file)):
+            if file in delete and os.path.getsize(file) == 0:
                 os.remove(os.path.join(foldername, file))
         elif path.isdir(os.path.join(foldername, file)):
             delete_all(os.path.join(foldername, file))
@@ -52,7 +62,7 @@ def exiftool_process(filepath, filename, filetype):
             elif otp.startswith('Date/Time Original') and filetype in imagefiletype:
                 return create_name(otp[-20:], filetype)
     else:
-        sys.stderr.write('ERROR: exiftool.exe file missing.')
+        sys.stderr.write('Time: ' + datetime.now().strftime("%H:%M:%S") + ' ERROR: exiftool.exe file missing.')
     return ''
 
 
@@ -64,14 +74,15 @@ def change_name(outputfile, filepath, filename, name):
     counter = 0
     while os.path.isfile(os.path.join(filepath, name)):
         counter += 1
-        filetype = name[-4:]
+        pointIndex = 0 - name.rfind('.')
+        filetype = name[pointIndex:]
         if counter != 1:
             name = name[:-7]
         else:
             name = name[:-4]
         name = name + '(' + str(counter) + ')' + filetype
     os.rename(os.path.join(filepath, filename), os.path.join(filepath, name))
-    outputfile.write(filename + ' changed to ' + name + '\n')
+    outputfile.write(datetime.now().strftime("%H:%M:%S") + ' - ' + filename + ' changed to ' + name + '\n')
 
 
 # This method manages the media files received, call methods to get file properties
@@ -83,24 +94,19 @@ def file_properties(filepath, filename):
     global nfilesprocessed
     nfilesprocessed += 1
 
-    if filename.lower()[-4:] in imagefiletype:
+    if filename.lower()[-4:] in imagefiletype or filename.lower()[-4:] in videofiletype:
         name = exiftool_process(filepath, filename, filename.lower()[-4:])
         if name != '':
             change_name(changedfiles, filepath, filename, name)
         else:
-            notchangedfiles.write("WARNING: There's no metadata in " + filename + '\n')
+            notchangedfiles.write(datetime.now().strftime("%H:%M:%S") + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
     elif filename.lower()[-5:] in imagefiletype:
         name = exiftool_process(filepath, filename, filename.lower()[-5:])
         if name != '':
             change_name(changedfiles, filepath, filename, name)
         else:
-            notchangedfiles.write("WARNING: There's no metadata in " + filename + '\n')
-    elif filename.lower()[-4:] in videofiletype:
-        name = exiftool_process(filepath, filename, filename.lower()[-4:])
-        if name != '':
-            change_name(changedfiles, filepath, filename, name)
-        else:
-            notchangedfiles.write("WARNING: There's no metadata in " + filename + '\n')
+            notchangedfiles.write(datetime.now().strftime("%H:%M:%S") + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
+
 
     changedfiles.close()
     notchangedfiles.close()
@@ -226,13 +232,18 @@ def main():
     print('\n\nFolders: ' + str(nfolders) + '. Files processed: ' + str(nfilesprocessed)
           + '. File with name changed: ' + str(nfilesconverted) + ('. Time spent: %.2f ' % t) + 'seconds')
 
+    print('\nDeleting logs that are empty')
+    delete_all(1, os.getcwd())
+    print('Deleted')
+
     ans2 = ''
     while ans2.lower() != 'y' and ans2.lower() != 'n':
-        ans2 = input('Do you want to remove the log files and error files of all folders? Y - Yes ; N - No\n-> ')
+        ans2 = input('\nDo you want to remove the log files and error files of all folders (You can come here after '
+                     'read every log)? Y - Yes ; N - No\n-> ')
 
     if ans2.lower() == 'y':
-        delete_all(os.getcwd())
-        print('Done.')
+        delete_all(0, os.getcwd())
+        print('All logs deleted.')
 
     print('\nMade by Henrique Alvelos. '
           '\nCheck my Github profile: https://github.com/Henrique-190'
