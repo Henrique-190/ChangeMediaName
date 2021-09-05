@@ -6,7 +6,7 @@ from os import path
 
 sys.stderr = open('error.txt', 'a+')
 
-newname = '{year}-{month}-{day} {hour}_{minute}_{second}.{filetype}'
+newname = '{year}{month}{day}-{hour}{minute}{second}{filetype}'
 output = ''
 folderDict = {}
 
@@ -48,9 +48,9 @@ def exiftool_process(filepath, filename, filetype):
                                    stderr=subprocess.STDOUT, universal_newlines=True)
         for otp in process.stdout:
             if otp.startswith('Create Date') and filetype in videofiletype:
-                return create_name(otp[-20:], 'mp4')
+                return create_name(otp[-20:], filetype)
             elif otp.startswith('Date/Time Original') and filetype in imagefiletype:
-                return create_name(otp[-20:], 'jpg')
+                return create_name(otp[-20:], filetype)
     else:
         sys.stderr.write('ERROR: exiftool.exe file missing.')
     return ''
@@ -83,14 +83,20 @@ def file_properties(filepath, filename):
     global nfilesprocessed
     nfilesprocessed += 1
 
-    if filename.lower().endswith('.jpg'):
-        name = exiftool_process(filepath, filename, '.jpg')
+    if filename.lower()[-4:] in imagefiletype:
+        name = exiftool_process(filepath, filename, filename.lower()[-4:])
         if name != '':
             change_name(changedfiles, filepath, filename, name)
         else:
             notchangedfiles.write("WARNING: There's no metadata in " + filename + '\n')
-    elif filename.lower().endswith('.mp4'):
-        name = exiftool_process(filepath, filename, '.mp4')
+    elif filename.lower()[-5:] in imagefiletype:
+        name = exiftool_process(filepath, filename, filename.lower()[-5:])
+        if name != '':
+            change_name(changedfiles, filepath, filename, name)
+        else:
+            notchangedfiles.write("WARNING: There's no metadata in " + filename + '\n')
+    elif filename.lower()[-4:] in videofiletype:
+        name = exiftool_process(filepath, filename, filename.lower()[-4:])
         if name != '':
             change_name(changedfiles, filepath, filename, name)
         else:
@@ -208,7 +214,7 @@ def select_discard():
 def main():
     print("Hi! I am a tool that changes '.3gp', '.mp4', '.avi', '.jpg', '.jpeg' and '.png' name file according to its "
           "creation date.")
-    print('\nI give you an example: helloIamAnImage.jpg -----------> 2021-12-05 04_20_00')
+    print('\nI give you an example: helloIamAnImage.jpg -----------> 20211205-042000')
 
     folderlist = select_discard()
     tic = timer()
