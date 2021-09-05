@@ -47,19 +47,17 @@ def create_name(string, filetype):
 # If it doesn't exists, this will send an error to stderr
 def exiftool_process(filepath, filename, filetype):
     if os.path.exists('exiftool.exe'):
+
         process = subprocess.Popen(['exiftool.exe', os.path.join(filepath, filename)], stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
-
-        with subprocess.Popen('exiftool.exe ' + os.path.join(filepath, filename),
-                   stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
-            output, errors = p.communicate()
-        lines = output.decode('utf-8').splitlines()
+        a = type(process.stdout)
+        lines = [x.decode('utf8') for x in process.stdout.readlines()]
 
         for otp in lines:
             if otp.startswith('Create Date') and filetype in videofiletype:
-                return create_name(otp[-19:], filetype)
+                return create_name(otp[-21:-1], filetype)
             elif otp.startswith('Date/Time Original') and filetype in imagefiletype:
-                return create_name(otp[-19:], filetype)
+                return create_name(otp[-21:-1], filetype)
 
     else:
         sys.stderr.write('Time: ' + datetime.now().strftime('%H:%M:%S') + ' ERROR: exiftool.exe file missing.')
@@ -72,7 +70,8 @@ def change_name(changedfiles, notchangedfiles, filepath, filename, name):
     global nfilesconverted
     nfilesconverted += 1
     counter = 0
-    if os.path.isfile(os.path.join(filepath, name)) and filecmp.cmp(os.path.join(filepath, filename), os.path.join(filepath, name), shallow=False):
+    if os.path.isfile(os.path.join(filepath, name)) and filecmp.cmp(os.path.join(filepath, filename),
+                                                                    os.path.join(filepath, name), shallow=False):
         notchangedfiles.write(datetime.now().strftime('%H:%M:%S') + ' - ' + filename + ' has the correct syntax\n')
     else:
         while os.path.isfile(os.path.join(filepath, name)):
@@ -120,13 +119,12 @@ def file_properties(filepath, filename):
 def process_folders(folderlist):
     global nfolders
     for foldername in folderlist:
-        print("Processing " + foldername)
         nfolders += 1
+        print('\nProcessing ' + foldername)
         for file in os.listdir(foldername):
             if path.isfile(os.path.join(foldername, file)):
                 file_properties(foldername, file)
-        print(foldername + ' processed.\n')
-
+        print(foldername + ' processed')
 
 # Delete any folder of the dictionary, checking one key and every values. Subdirectories of that folder are also
 # deleted.
