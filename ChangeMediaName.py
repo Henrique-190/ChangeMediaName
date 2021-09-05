@@ -4,6 +4,7 @@ from datetime import datetime
 from timeit import default_timer as timer
 import sys
 from os import path
+import filecmp
 
 sys.stderr = open('error.txt', 'a+')
 
@@ -25,10 +26,10 @@ imagefiletype = ['.jpg', '.jpeg', '.png']
 def delete_all(option, foldername):
     for file in os.listdir(foldername):
         if path.isfile(os.path.join(foldername, file)):
-            if file in delete and ((option == 1 and os.path.getsize(file) == 0) or option == 2):
+            if file in delete and ((option == 1 and os.path.getsize(os.path.join(foldername, file)) == 0) or option == 0):
                 os.remove(os.path.join(foldername, file))
         elif path.isdir(os.path.join(foldername, file)):
-            delete_all(os.path.join(foldername, file))
+            delete_all(option, os.path.join(foldername, file))
 
 
 def delete_emptylogs(foldername):
@@ -62,7 +63,7 @@ def exiftool_process(filepath, filename, filetype):
             elif otp.startswith('Date/Time Original') and filetype in imagefiletype:
                 return create_name(otp[-20:], filetype)
     else:
-        sys.stderr.write('Time: ' + datetime.now().strftime("%H:%M:%S") + ' ERROR: exiftool.exe file missing.')
+        sys.stderr.write('Time: ' + datetime.now().strftime('%H:%M:%S') + ' ERROR: exiftool.exe file missing.')
     return ''
 
 
@@ -72,17 +73,20 @@ def change_name(outputfile, filepath, filename, name):
     global nfilesconverted
     nfilesconverted += 1
     counter = 0
-    while os.path.isfile(os.path.join(filepath, name)):
-        counter += 1
-        pointIndex = 0 - name.rfind('.')
-        filetype = name[pointIndex:]
-        if counter != 1:
-            name = name[:-7]
-        else:
-            name = name[:-4]
-        name = name + '(' + str(counter) + ')' + filetype
-    os.rename(os.path.join(filepath, filename), os.path.join(filepath, name))
-    outputfile.write(datetime.now().strftime("%H:%M:%S") + ' - ' + filename + ' changed to ' + name + '\n')
+    if filecmp.cmp(os.path.join(filepath, filename),os.path.join(filepath, name),shallow=False):
+        outputfile.write(datetime.now().strftime('%H:%M:%S') + ' - ' + filename + ' has the correct syntax\n')
+    else:
+        while os.path.isfile(os.path.join(filepath, name)):
+            counter += 1
+            pointIndex = name.rfind('.')
+            filetype = name[pointIndex:]
+            if counter != 1:
+                name = name[:-7]
+            else:
+                name = name[:-4]
+            name = name + '(' + str(counter) + ')' + filetype
+        os.rename(os.path.join(filepath, filename), os.path.join(filepath, name))
+        outputfile.write(datetime.now().strftime('%H:%M:%S') + ' - ' + filename + ' changed to ' + name + '\n')
 
 
 # This method manages the media files received, call methods to get file properties
@@ -99,13 +103,13 @@ def file_properties(filepath, filename):
         if name != '':
             change_name(changedfiles, filepath, filename, name)
         else:
-            notchangedfiles.write(datetime.now().strftime("%H:%M:%S") + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
+            notchangedfiles.write(datetime.now().strftime('%H:%M:%S') + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
     elif filename.lower()[-5:] in imagefiletype:
         name = exiftool_process(filepath, filename, filename.lower()[-5:])
         if name != '':
             change_name(changedfiles, filepath, filename, name)
         else:
-            notchangedfiles.write(datetime.now().strftime("%H:%M:%S") + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
+            notchangedfiles.write(datetime.now().strftime('%H:%M:%S') + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
 
 
     changedfiles.close()
@@ -145,7 +149,7 @@ def print_dict():
         '*‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾*\n')
     counter = 0
     for k in folderDict.keys():
-        subd = ""
+        subd = ''
         for v in folderDict[k]:
             subd += (v + '  ;  ')
         if len(subd) > 0:
@@ -184,9 +188,9 @@ def select_discard():
     print_dict()
 
     foldrs = '1'
-    while foldrs.lower() != 'done':
+    while foldrs.lower() != 'done' and folderDict:
         foldrs = input('\nPlease write the numbers of the directories you want to' + aux1 + '.\n' +
-                       'If you want only to' + aux1 + " a subdirectory, search upper, there will be its number" +
+                       'If you want only to' + aux1 + ' a subdirectory, search upper, there will be its number' +
                        ' If you want to see the folders again, write show .\n' +
                        "If you don't want to select more directories, write 'done'." + aux2 + '-> ')
         if foldrs.lower() == 'show':
@@ -213,37 +217,46 @@ def select_discard():
     if len(folderlist) == 0 and option == '2':
         folderlist = list(folderDict.keys())
 
-    print('List of folders to process created. Changing the names...')
+    if not folderDict:
+        prepare = ''
+        while prepare.lower() != 'y' and prepare.lower() != 'n':
+            prepare = input('\nYou selected all directories, want to continue or redo? Y - Yes ; N - No\n-> ')
+
+        if prepare.lower() == 'n':
+            folderlist = []
+
     return folderlist
 
 
 def main():
     print("Hi! I am a tool that changes '.3gp', '.mp4', '.avi', '.jpg', '.jpeg' and '.png' name file according to its "
-          "creation date.")
+          'creation date.')
     print('\nI give you an example: helloIamAnImage.jpg -----------> 20211205-042000')
 
     folderlist = select_discard()
-    tic = timer()
-    process_folders(folderlist)
-    toc = timer()
-    t = toc - tic
+    if len(folderlist) > 0:
+        print('List of folders to process created. Changing the names...')
+        tic = timer()
+        process_folders(folderlist)
+        toc = timer()
+        t = toc - tic
 
-    sys.stderr.close()
-    print('\n\nFolders: ' + str(nfolders) + '. Files processed: ' + str(nfilesprocessed)
-          + '. File with name changed: ' + str(nfilesconverted) + ('. Time spent: %.2f ' % t) + 'seconds')
+        sys.stderr.close()
+        print('\n\nFolders: ' + str(nfolders) + '. Files processed: ' + str(nfilesprocessed)
+            + '. File with name changed: ' + str(nfilesconverted) + ('. Time spent: %.2f ' % t) + 'seconds')
 
-    print('\nDeleting logs that are empty')
-    delete_all(1, os.getcwd())
-    print('Deleted')
+        print('\nDeleting logs that are empty')
+        delete_all(1, os.getcwd())
+        print('Deleted')
 
-    ans2 = ''
-    while ans2.lower() != 'y' and ans2.lower() != 'n':
-        ans2 = input('\nDo you want to remove the log files and error files of all folders (You can come here after '
-                     'read every log)? Y - Yes ; N - No\n-> ')
+        ans2 = ''
+        while ans2.lower() != 'y' and ans2.lower() != 'n':
+            ans2 = input('\nDo you want to remove the log files and error files of all folders (You can come here '
+                         'after read every log)? Y - Yes ; N - No\n-> ')
 
-    if ans2.lower() == 'y':
-        delete_all(0, os.getcwd())
-        print('All logs deleted.')
+        if ans2.lower() == 'y':
+            delete_all(0, os.getcwd())
+            print('All logs deleted.')
 
     print('\nMade by Henrique Alvelos. '
           '\nCheck my Github profile: https://github.com/Henrique-190'
