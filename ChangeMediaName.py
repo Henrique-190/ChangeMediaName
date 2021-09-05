@@ -56,7 +56,6 @@ def exiftool_process(filepath, filename, filetype):
         lines = output.decode('utf-8').splitlines()
 
         for otp in lines:
-            print(otp)
             if otp.startswith('Create Date') and filetype in videofiletype:
                 return create_name(otp[-19:], filetype)
             elif otp.startswith('Date/Time Original') and filetype in imagefiletype:
