@@ -26,19 +26,11 @@ imagefiletype = ['.jpg', '.jpeg', '.png']
 def delete_all(option, foldername):
     for file in os.listdir(foldername):
         if path.isfile(os.path.join(foldername, file)):
-            if file in delete and ((option == 1 and os.path.getsize(os.path.join(foldername, file)) == 0) or option == 0):
+            if file in delete and (
+                    (option == 1 and os.path.getsize(os.path.join(foldername, file)) == 0) or option == 0):
                 os.remove(os.path.join(foldername, file))
         elif path.isdir(os.path.join(foldername, file)):
             delete_all(option, os.path.join(foldername, file))
-
-
-def delete_emptylogs(foldername):
-    for file in os.listdir(foldername):
-        if path.isfile(os.path.join(foldername, file)):
-            if file in delete and os.path.getsize(file) == 0:
-                os.remove(os.path.join(foldername, file))
-        elif path.isdir(os.path.join(foldername, file)):
-            delete_all(os.path.join(foldername, file))
 
 
 # Method in charge of manage the string received and change it to a name, considering the syntax above defined
@@ -56,12 +48,20 @@ def create_name(string, filetype):
 def exiftool_process(filepath, filename, filetype):
     if os.path.exists('exiftool.exe'):
         process = subprocess.Popen(['exiftool.exe', os.path.join(filepath, filename)], stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT, universal_newlines=True)
-        for otp in process.stdout:
+                                   stderr=subprocess.STDOUT)
+
+        with subprocess.Popen('exiftool.exe ' + os.path.join(filepath, filename),
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
+            output, errors = p.communicate()
+        lines = output.decode('utf-8').splitlines()
+
+        for otp in lines:
+            print(otp)
             if otp.startswith('Create Date') and filetype in videofiletype:
-                return create_name(otp[-20:], filetype)
+                return create_name(otp[-19:], filetype)
             elif otp.startswith('Date/Time Original') and filetype in imagefiletype:
-                return create_name(otp[-20:], filetype)
+                return create_name(otp[-19:], filetype)
+
     else:
         sys.stderr.write('Time: ' + datetime.now().strftime('%H:%M:%S') + ' ERROR: exiftool.exe file missing.')
     return ''
@@ -73,7 +73,7 @@ def change_name(outputfile, filepath, filename, name):
     global nfilesconverted
     nfilesconverted += 1
     counter = 0
-    if filecmp.cmp(os.path.join(filepath, filename),os.path.join(filepath, name),shallow=False):
+    if os.path.isfile(os.path.join(filepath, name)) and filecmp.cmp(os.path.join(filepath, filename), os.path.join(filepath, name), shallow=False):
         outputfile.write(datetime.now().strftime('%H:%M:%S') + ' - ' + filename + ' has the correct syntax\n')
     else:
         while os.path.isfile(os.path.join(filepath, name)):
@@ -103,14 +103,15 @@ def file_properties(filepath, filename):
         if name != '':
             change_name(changedfiles, filepath, filename, name)
         else:
-            notchangedfiles.write(datetime.now().strftime('%H:%M:%S') + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
+            notchangedfiles.write(
+                datetime.now().strftime('%H:%M:%S') + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
     elif filename.lower()[-5:] in imagefiletype:
         name = exiftool_process(filepath, filename, filename.lower()[-5:])
         if name != '':
             change_name(changedfiles, filepath, filename, name)
         else:
-            notchangedfiles.write(datetime.now().strftime('%H:%M:%S') + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
-
+            notchangedfiles.write(
+                datetime.now().strftime('%H:%M:%S') + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
 
     changedfiles.close()
     notchangedfiles.close()
@@ -235,7 +236,7 @@ def main():
 
     folderlist = select_discard()
     if len(folderlist) > 0:
-        print('List of folders to process created. Changing the names...')
+        print('\nList of folders to process created. Changing the names...')
         tic = timer()
         process_folders(folderlist)
         toc = timer()
@@ -243,7 +244,7 @@ def main():
 
         sys.stderr.close()
         print('\n\nFolders: ' + str(nfolders) + '. Files processed: ' + str(nfilesprocessed)
-            + '. File with name changed: ' + str(nfilesconverted) + ('. Time spent: %.2f ' % t) + 'seconds')
+              + '. File with name changed: ' + str(nfilesconverted) + ('. Time spent: %.2f ' % t) + 'seconds')
 
         print('\nDeleting logs that are empty')
         delete_all(1, os.getcwd())
