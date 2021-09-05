@@ -47,18 +47,15 @@ def create_name(string, filetype):
 # If it doesn't exists, this will send an error to stderr
 def exiftool_process(filepath, filename, filetype):
     if os.path.exists('exiftool.exe'):
-
         process = subprocess.Popen(['exiftool.exe', os.path.join(filepath, filename)], stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
-        a = type(process.stdout)
-        lines = [x.decode('utf8') for x in process.stdout.readlines()]
+        lines = [x.decode('ISO-8859-1') for x in process.stdout.readlines()]
 
         for otp in lines:
             if otp.startswith('Create Date') and filetype in videofiletype:
                 return create_name(otp[-21:-1], filetype)
             elif otp.startswith('Date/Time Original') and filetype in imagefiletype:
                 return create_name(otp[-21:-1], filetype)
-
     else:
         sys.stderr.write('Time: ' + datetime.now().strftime('%H:%M:%S') + ' ERROR: exiftool.exe file missing.')
     return ''
@@ -91,6 +88,7 @@ def change_name(changedfiles, notchangedfiles, filepath, filename, name):
 # and to change its name. Moreover, it creates two logs about files with name changed or not.
 # Also counts the number of files processed.
 def file_properties(filepath, filename):
+    print(filename)
     changedfiles = open(os.path.join(filepath, 'changedFiles.txt'), 'a+')
     notchangedfiles = open(os.path.join(filepath, 'notChangedFiles.txt'), 'a+')
     global nfilesprocessed
