@@ -67,14 +67,14 @@ def exiftool_process(filepath, filename, filetype):
     return ''
 
 
-# This method will rename the media file. It checks if the name already exists and,
-# if yes, will add parenthesis and a number until this name be unique
-def change_name(outputfile, filepath, filename, name):
+# This method will rename the media file, in case of the file has not the correct syntax.
+# It checks if the name already exists and, if yes, will add parenthesis and a number until this name be unique
+def change_name(changedfiles, notchangedfiles, filepath, filename, name):
     global nfilesconverted
     nfilesconverted += 1
     counter = 0
     if os.path.isfile(os.path.join(filepath, name)) and filecmp.cmp(os.path.join(filepath, filename), os.path.join(filepath, name), shallow=False):
-        outputfile.write(datetime.now().strftime('%H:%M:%S') + ' - ' + filename + ' has the correct syntax\n')
+        notchangedfiles.write(datetime.now().strftime('%H:%M:%S') + ' - ' + filename + ' has the correct syntax\n')
     else:
         while os.path.isfile(os.path.join(filepath, name)):
             counter += 1
@@ -86,7 +86,7 @@ def change_name(outputfile, filepath, filename, name):
                 name = name[:-4]
             name = name + '(' + str(counter) + ')' + filetype
         os.rename(os.path.join(filepath, filename), os.path.join(filepath, name))
-        outputfile.write(datetime.now().strftime('%H:%M:%S') + ' - ' + filename + ' changed to ' + name + '\n')
+        changedfiles.write(datetime.now().strftime('%H:%M:%S') + ' - ' + filename + ' changed to ' + name + '\n')
 
 
 # This method manages the media files received, call methods to get file properties
@@ -101,7 +101,7 @@ def file_properties(filepath, filename):
     if filename.lower()[-4:] in imagefiletype or filename.lower()[-4:] in videofiletype:
         name = exiftool_process(filepath, filename, filename.lower()[-4:])
         if name != '':
-            change_name(changedfiles, filepath, filename, name)
+            change_name(changedfiles, notchangedfiles, filepath, filename, name)
         else:
             notchangedfiles.write(
                 datetime.now().strftime('%H:%M:%S') + ' - ' + "WARNING: There's no metadata in " + filename + '\n')
@@ -121,10 +121,12 @@ def file_properties(filepath, filename):
 def process_folders(folderlist):
     global nfolders
     for foldername in folderlist:
+        print("Processing " + foldername)
         nfolders += 1
         for file in os.listdir(foldername):
             if path.isfile(os.path.join(foldername, file)):
                 file_properties(foldername, file)
+        print(foldername + ' processed.\n')
 
 
 # Delete any folder of the dictionary, checking one key and every values. Subdirectories of that folder are also
