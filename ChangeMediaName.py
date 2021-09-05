@@ -1,10 +1,13 @@
+import filecmp
+import platform
 import subprocess
+import sys
 import os
 from datetime import datetime
-from timeit import default_timer as timer
-import sys
 from os import path
-import filecmp
+from timeit import default_timer as timer
+from shutil import which
+
 
 sys.stderr = open('error.txt', 'a+')
 
@@ -46,9 +49,10 @@ def create_name(string, filetype):
 # If a specific property of the media file exists, this will call another method to create a name
 # If it doesn't exists, this will send an error to stderr
 def exiftool_process(filepath, filename, filetype):
-    if os.path.exists('exiftool.exe'):
-        process = subprocess.Popen(['exiftool.exe', os.path.join(filepath, filename)], stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT)
+    global command
+    if os.path.exists('exiftool.exe') or which('exiftool') is not None:
+        process = subprocess.Popen([command, os.path.join(filepath, filename)], stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
         lines = [x.decode('ISO-8859-1') for x in process.stdout.readlines()]
 
         for otp in lines:
@@ -56,9 +60,9 @@ def exiftool_process(filepath, filename, filetype):
                 return create_name(otp[-21:-1], filetype)
             elif otp.startswith('Date/Time Original') and filetype in imagefiletype:
                 return create_name(otp[-21:-1], filetype)
+        return ''
     else:
-        sys.stderr.write('Time: ' + datetime.now().strftime('%H:%M:%S') + ' ERROR: exiftool.exe file missing.')
-    return ''
+        sys.stderr.write('An error occurred: Exiftool program/command missing. Please install it.')
 
 
 # This method will rename the media file, in case of the file has not the correct syntax.
@@ -123,6 +127,7 @@ def process_folders(folderlist):
             if path.isfile(os.path.join(foldername, file)):
                 file_properties(foldername, file)
         print(foldername + ' processed')
+
 
 # Delete any folder of the dictionary, checking one key and every values. Subdirectories of that folder are also
 # deleted.
@@ -262,5 +267,8 @@ def main():
           '\nBye! ')
 
 
-subdirectories(os.getcwd())
-main()
+if os.path.exists('exiftool.exe') or which('exiftool') is not None:
+    subdirectories(os.getcwd())
+    main()
+else:
+    print('Please download or install exiftool.')
