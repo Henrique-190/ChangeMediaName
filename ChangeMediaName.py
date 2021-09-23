@@ -23,8 +23,8 @@ videoFiletype = ['.3gp', '.mp4', '.avi', '.mov']
 imageFiletype = ['.jpg', '.jpeg', '.png']
 
 
-# Method that is called if the user wants to delete all the log files.
-# It searches in all directories.
+# Method that is called if the user wants to delete the log files. There are two options: all log files or all log files
+# with nothing inside of it. Searches in all directories.
 def delete_all(option):
     for folder in FolderList:
         for file in os.listdir(folder):
@@ -33,7 +33,7 @@ def delete_all(option):
                 os.remove(os.path.join(folder, file))
 
 
-# Method in charge of manage the string received and change it to a name, considering the syntax above defined
+# Manage the string received and change it to a name, considering the syntax above defined
 def create_name(string, filetype):
     first, second = string.split(' ', 1)
     y, m, d = first.split(':', 2)
@@ -43,7 +43,7 @@ def create_name(string, filetype):
 
 # If 'exiftool.exe' file exists, this will execute this file with the media file to see its properties
 # If a specific property of the media file exists, this will call another method to create a name
-# If it doesn't exists, this will send an error to stderr
+# If 'exiftool.exe' doesn't exist, this will send an error to stderr
 def exiftool_process(filepath, filename, filetype):
     global Command
     if os.path.exists(Command) or which(Command) is not None:
@@ -91,6 +91,7 @@ def change_name(changedfiles, notchangedfiles, filepath, filename, name):
         changedfiles.write(datetime.now().strftime('%H:%M:%S') + ' - ' + filename + ' changed to ' + name + '\n')
 
 
+# This method checks if some folder exists and, if not, creates. Alo return folder's name.
 def create_folder(filename):
     filename = filename[:8]
     foldername = os.path.join('Output', NewNameFolder.format(year=filename[:4], month=filename[4:6], day=filename[6:8]))
@@ -150,6 +151,7 @@ def delete_subdirectories(foldername):
     FolderList = [x for x in FolderList if foldername not in x]
 
 
+# Return a string with all elements of a folder's list
 def makelist(flist):
     ans = ''
     counter = 0
@@ -234,6 +236,7 @@ def selDisc_Folders():
             selDisc_Folders()
 
 
+# Turn elements of video and image filetypes list in string
 def string_filetypes(video, image):
     videostring = 'Video filetypes: '
     imagestring = 'Image filetypes: '
@@ -248,6 +251,8 @@ def string_filetypes(video, image):
     return videostring + '\n' + imagestring
 
 
+# Gets options from the user. He can choose if he wants to select or discard filetypes and, writing its number,
+# builds a list of filetypes to process.
 def selDisc_Filetypes():
     global videoFiletype, imageFiletype
     videolist = []
@@ -315,6 +320,7 @@ def selDisc_Filetypes():
             selDisc_Filetypes()
 
 
+# Gets options from the user. He can choose if he wants to create folders according to file's name.
 def selOrder():
     global Order
     while Order.lower() != 'y' and Order.lower() != 'n':
