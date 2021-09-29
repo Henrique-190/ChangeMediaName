@@ -5,8 +5,7 @@ import os
 from datetime import datetime
 from os import path
 from timeit import default_timer as timer
-from shutil import which
-from shutil import copy2
+from shutil import which, copy2
 
 NewNameFile = '{year}{month}{day}_{hour}{minute}{second}{filetype}'
 NewNameFolder = '{year}-{month}-{day}'
